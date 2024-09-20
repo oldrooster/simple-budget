@@ -1,7 +1,6 @@
+__pycache__
 venv/
 import/*
 .env
 simple-budget
-simple-budget/
-alembic.ini
 

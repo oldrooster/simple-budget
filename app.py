@@ -68,6 +68,12 @@ def categories():
         return render_template('categories.html')
     return redirect(url_for('login'))
 
+@app.route('/rules')
+def rules():
+    if 'username' in session:
+        return render_template('rules.html')
+    return redirect(url_for('login'))
+
 @app.route('/import')
 def import_data():
     if 'username' in session:

@@ -185,4 +185,47 @@ class GiftsImport(db.Model):
     destination_account_number = db.Column(db.String(32), nullable=True) # Column 15
     consecutive_duplicates = db.Column(db.Integer, nullable=False, default=0) # No. of consecutive duplicates
 
+class Categories(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(32), nullable=False, unique=True)
+    subcategory = db.Column(db.String(32), nullable=False)
 
+class TransactionsCategories(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+
+# Rules table for setting up rules that have one or many rule conditions and one or mant rule actions
+class Rules(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(32), nullable=False)
+    description = db.Column(db.String(32), nullable=True)
+
+# Rule Actions table for what category and sub category to apply  when one or more rules are matched includes associate Rules ID
+class RuleActions(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rules.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+
+# Rule Condtions for given rule. includes specific field from transaction table to match on
+class RuleConditions(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('rules.id'), nullable=False)
+    field = db.Column(db.String(32), nullable=False)
+    operator = db.Column(db.String(32), nullable=False)
+    value = db.Column(db.String(32), nullable=False)
+
+# class PayeesCategories(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     payee_id = db.Column(db.Integer, db.ForeignKey('payees.id'), nullable=False)
+#     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+
+# class TransactionsPayees(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=False)
+#     payee_id = db.Column(db.Integer, db.ForeignKey('payees.id'), nullable=False)
+
+# class TransactionsAccounts(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=False)
+#     account_id = db.Column(db.Integer, db.ForeignKey('accounts.id'), nullable=False)
