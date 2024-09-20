@@ -1,8 +1,31 @@
 {% extends "base.html" %}
 
 {% block title %}Accounts{% endblock %}
-
+{% block page_title %}Manage Accounts{% endblock %}
 {% block content %}
-    <h1>Manage Accounts</h1>
     <p>Manage your accounts here.</p>
+
+    <table class="styled-table">
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>Account Number</th>
+                <th>Opening Balance</th>
+                <th>Balance</th>
+                <!-- Add other columns as needed -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row[1] }}</td>
+                    <td>{{ row[2] }}</td>
+                    <td>{{ row[3] | currency }}</td>
+                    <td>{{ row[4] | currency }}</td>
+
+                    <!-- Add other columns as needed -->
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}

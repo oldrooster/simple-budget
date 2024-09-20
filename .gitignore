@@ -1,1 +1,7 @@
 venv/
+import/*
+.env
+simple-budget
+simple-budget/
+alembic.ini
+

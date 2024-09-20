@@ -1,8 +1,88 @@
 {% extends "base.html" %}
 
 {% block title %}Import{% endblock %}
-
+{% block page_title %}Import Banking Data{% endblock %}
 {% block content %}
-    <h1>Import Banking Data</h1>
+    {% if is_table_empty %}
     <p>Import your GIFTS banking files to populate your expenses.</p>
+    <form id="upload-form" action="{{ url_for('upload_files') }}" method="post" enctype="multipart/form-data" class="d-flex align-items-center">
+        <input type="file" name="files" accept=".gifts" multiple class="form-control me-2">
+        <input type="submit" value="Import" class="btn btn-primary">
+    </form>
+    <div id="loading-spinner" class="spinner-border text-primary" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    {% else %}
+        <h2>Resolve following duplicate transactions</h2>
+        <form id="transactions-form" method="post">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all"></th>
+                        <th>Account</th>
+                        <th>Transaction Date</th>
+                        <th>Amount</th>
+                        <th>Payee</th>
+                        <th>Particulars</th>
+                        <th>Code</th>
+                        <th>Reference</th>
+                        <th>Consecutive Duplicates</th>
+                        <!-- Add other columns as needed -->
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td><input type="checkbox" name="selected_rows" value="{{ row[0] }}"></td>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                            <td>{{ row[3] }}</td>
+                            <td>{{ row[4] }}</td>
+                            <td>{{ row[5] }}</td>
+                            <td>{{ row[6] }}</td>
+                            <td>{{ row[7] }}</td>
+                            <td>{{ row[8] }}</td>
+                            <!-- Add other columns as needed -->
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="button-group">
+                <button type="submit" formaction="{{ url_for('add_duplicate_transaction') }}" class="btn btn-success">Add Transaction</button>
+                <button type="submit" formaction="{{ url_for('delete_duplicate_transaction') }}" class="btn btn-warning">Delete</button>
+                <button type="button" onclick="confirmDeleteAll()" class="btn btn-danger">Delete All</button>
+            </div>
+        </form>
+    {% endif %}
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var uploadForm = document.getElementById('upload-form');
+            if (uploadForm) {
+                uploadForm.onsubmit = function() {
+                    document.getElementById('loading-spinner').style.display = 'block';
+                    console.log('Form submitted, hiding upload form...');
+                    uploadForm.style.display = 'none';
+                }
+            }
+    
+            var selectAllCheckbox = document.getElementById('select-all');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.onclick = function() {
+                    var checkboxes = document.getElementsByName('selected_rows');
+                    for (var checkbox of checkboxes) {
+                        checkbox.checked = this.checked;
+                    }
+                }
+            }
+        });
+    
+        function confirmDeleteAll() {
+            if (confirm("Are you sure you want to delete all transactions?")) {
+                document.getElementById('transactions-form').action = "{{ url_for('delete_all_duplicate_transactions') }}";
+                document.getElementById('transactions-form').submit();
+            }
+        }
+    </script>
 {% endblock %}

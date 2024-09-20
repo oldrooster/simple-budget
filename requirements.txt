@@ -1,3 +1,8 @@
 Flask
 Flask-Login
 flask_cors
+python-dotenv
+Flask-SQLAlchemy
+SQLAlchemy
+sqlalchemy_utils
+psycopg2-binary
