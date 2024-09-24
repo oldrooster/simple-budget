@@ -185,27 +185,36 @@ class GiftsImport(db.Model):
     destination_account_number = db.Column(db.String(32), nullable=True) # Column 15
     consecutive_duplicates = db.Column(db.Integer, nullable=False, default=0) # No. of consecutive duplicates
 
-class Categories(db.Model):
+class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(32), nullable=False, unique=True)
-    subcategory = db.Column(db.String(32), nullable=False)
+    name = db.Column(db.String(32), nullable=False, unique=True)
+    subcategories = db.relationship('Subcategory', backref='category', cascade="all, delete-orphan", lazy=True)
+
+class Subcategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(32), nullable=False, unique=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id', ondelete='CASCADE'), nullable=False)
 
 class TransactionsCategories(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
+    sub_category_id = db.Column(db.Integer, db.ForeignKey('subcategory.id'), nullable=True)
 
 # Rules table for setting up rules that have one or many rule conditions and one or mant rule actions
 class Rules(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), nullable=False)
     description = db.Column(db.String(32), nullable=True)
+    conditions = db.relationship('RuleConditions', backref='rule', cascade="all, delete-orphan", lazy=True)
+    actions = db.relationship('RuleActions', backref='rule', cascade="all, delete-orphan", lazy=True)
 
 # Rule Actions table for what category and sub category to apply  when one or more rules are matched includes associate Rules ID
 class RuleActions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('rules.id'), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id', ondelete='SET NULL'), nullable=True)
+    subcategory_id = db.Column(db.Integer, db.ForeignKey('subcategory.id', ondelete='SET NULL'), nullable=True)
 
 # Rule Condtions for given rule. includes specific field from transaction table to match on
 class RuleConditions(db.Model):
@@ -214,6 +223,7 @@ class RuleConditions(db.Model):
     field = db.Column(db.String(32), nullable=False)
     operator = db.Column(db.String(32), nullable=False)
     value = db.Column(db.String(32), nullable=False)
+    and_condition = db.Column(db.Boolean, nullable=False, default=False)
 
 # class PayeesCategories(db.Model):
 #     id = db.Column(db.Integer, primary_key=True)

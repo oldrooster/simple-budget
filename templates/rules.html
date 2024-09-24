@@ -3,5 +3,287 @@
 {% block title %}Rules{% endblock %}
 {% block page_title %}Manage Rules{% endblock %}
 {% block content %}
-    <p>Manage your Rules here.</p>
+
+    <!-- Display Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div>
+        <ul class="list-group">
+            {% for rule in rules %}
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <h4>{{ rule.name }}</h4>
+                            <p class="lead">{{ rule.description }}</p>
+                            {% if rule.conditions %}
+                            <dl class="row">
+                                <dt class="col-sm-2">Conditions</dt>
+                                <dd class="col-sm-10">
+                                {% for condition in rule.conditions %}
+                                    <p>{{ condition.field }} {{ condition.operator }} {{ condition.value }}</p>
+                                {% endfor %}
+                            </dd>
+                            </dl>
+                            {% endif %}
+                            {% if rule.actions %}
+                            <dl class="row">
+                                <dt class="col-sm-2">Actions</dt>
+                                <dd class="col-sm-10">
+                                    {% for action in rule.actions %}
+                                        <p>
+                                            Set Category =  {{ categories | selectattr('id', 'equalto', action.category_id) | map(attribute='name') | first | default('N/A') }}
+                                            {% if action.subcategory_id %}
+                                            and Sub Category = {{ subcategories | selectattr('id', 'equalto', action.subcategory_id) | map(attribute='name') | first | default('N/A') }}
+                                            {% endif %}
+                                        </p>
+                                    {% endfor %}
+                                </dd>
+                            </dl>
+                                {% endif %}
+
+                        </div>
+                        <div class="ml-3">
+                            <button class="btn btn-primary mb-2" onclick="editRule({{ rule.id }})">Edit</button>
+                            <button class="btn btn-warning mb-2" onclick="deleteRule({{ rule.id }})">Delete</button>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Add New Rule Button -->
+    <div class="row">
+        <div class="col-md-12">
+            <hr>
+        <button class="btn btn-success mb-2" onclick="showAddRuleModal()">Add New Rule</button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Rule Modal -->
+    <div id="ruleModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="ruleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalLabel">Add/Edit Rule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        
+                </div>
+                <div class="modal-body">
+                    <form id="ruleForm" action="{{ url_for('add_edit_rule') }}" method="post">
+                        <input type="hidden" name="rule_id" id="ruleId">
+                        <div class="form-group">
+                            <label for="ruleName">Rule Name</label>
+                            <input type="text" class="form-control" id="ruleName" name="rule_name" placeholder="Rule Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="ruleDescription">Rule Description</label>
+                            <input type="text" class="form-control" id="ruleDescription" name="rule_description" placeholder="Rule Description">
+                        </div>
+                        <div class="form-group">
+                            <label>Rule Conditions</label>
+                            <div id="ruleConditionsContainer">
+                                <!-- Conditions will be dynamically added here -->
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addCondition()">Add Condition</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Rule Actions</label>
+                            <div id="ruleActionsContainer">
+                                <!-- Actions will be dynamically added here -->
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addAction()">Add Action</button>
+                        </div>
+                        <hr/>
+                        <button type="submit" class="btn btn-primary">Save Rule</button>
+                        <hr/>
+                        <div class="form-group">
+                            <table class="styled-table" id="associatedTransactions" style="font-size: 0.8em; width: 100%; margin: 0 auto;">
+                                <thead>
+                                    <tr>
+                                        <!--<th>Transaction ID</th>-->
+                                        <th>Account</th>
+                                        <th>Particulars</th>
+                                        <th>Code</th>
+                                        <th>Reference</th>
+                                        <th>Payee</th>
+                                        <th>Amount</th>
+                                        <th>Transaction Type</th>
+                                        <th>Destination Account</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Transactions will be dynamically added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const categories = {{ categories|tojson }};
+        const subcategories = {{ subcategories|tojson }};
+
+        function showAddRuleModal() {
+            document.getElementById('ruleForm').reset();
+            document.getElementById('ruleId').value = '';
+            document.getElementById('ruleModalLabel').innerText = 'Add Rule';
+            document.getElementById('ruleConditionsContainer').innerHTML = '';
+            document.getElementById('ruleActionsContainer').innerHTML = '';
+            var ruleModal = new bootstrap.Modal(document.getElementById('ruleModal'));
+            ruleModal.show();
+        }
+
+        function editRule(ruleId) {
+            fetch(`/api/rule/${ruleId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('ruleId').value = data.id;
+                    document.getElementById('ruleName').value = data.name;
+                    document.getElementById('ruleDescription').value = data.description;
+                    document.getElementById('ruleModalLabel').innerText = 'Edit Rule';
+
+                    // Clear existing conditions and actions
+                    document.getElementById('ruleConditionsContainer').innerHTML = '';
+                    document.getElementById('ruleActionsContainer').innerHTML = '';
+
+                    // Populate conditions
+                    data.conditions.forEach(condition => {
+                        addCondition(condition.field, condition.operator, condition.value, condition.and_condition);
+                    });
+
+                    // Populate actions
+                    data.actions.forEach(action => {
+                        addAction(action.category_id, action.subcategory_id);
+                    });
+
+                    var ruleModal = new bootstrap.Modal(document.getElementById('ruleModal'));
+                    ruleModal.show();
+                    fetchAssociatedTransactions();
+                });
+        }
+
+        function addCondition(field = '', operator = '', value = '', and_condition = 'False') {
+            var container = document.getElementById('ruleConditionsContainer');
+            var conditionHtml = `
+                <div class="d-flex mb-2">
+                    <select class="form-control mr-1" name="condition_and_condition[]" style="width: 80px; ${container.children.length === 0 ? 'visibility: hidden;' : ''}" required onchange="fetchAssociatedTransactions()">
+                        <option value='false' ${and_condition === false ? 'selected' : ''}>OR</option>
+                        <option value='true' ${and_condition === true ? 'selected' : ''}>AND</option>
+                    </select>
+                    <select class="form-control mr-2" name="condition_field[]" required onchange="fetchAssociatedTransactions()">
+                        <option value="account_number" ${field === 'account_number' ? 'selected' : ''}>Account Number</option>
+                        <option value="particulars" ${field === 'particulars' ? 'selected' : ''}>Particulars</option>
+                        <option value="code" ${field === 'code' ? 'selected' : ''}>Code</option>
+                        <option value="reference" ${field === 'reference' ? 'selected' : ''}>Reference</option>
+                        <option value="payee" ${field === 'payee' ? 'selected' : ''}>Payee</option>
+                        <option value="transaction_type" ${field === 'transaction_type' ? 'selected' : ''}>Transaction_Type</option>
+                        <option value="destination_account_number" ${field === 'destination_account_number' ? 'selected' : ''}>Target Account No</option>
+                    </select>
+                    <select class="form-control mr-2" name="condition_operator[]" style="width: 160px;" required onchange="fetchAssociatedTransactions()">
+                        <option value="=" ${operator === '=' ? 'selected' : ''}>Equals</option>
+                        <option value="!=" ${operator === '!=' ? 'selected' : ''}>Not Equals</option>
+                        <option value="like" ${operator === 'like' ? 'selected' : ''}>Contains</option>
+                    </select>
+                    <input type="text" class="form-control mr-2" name="condition_value[]" placeholder="Value" value="${value}" required onchange="fetchAssociatedTransactions()">
+                    <button type="button" class="btn btn-danger" onclick="removeCondition(this)">Remove</button>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', conditionHtml);
+        }
+        function fetchAssociatedTransactions() {
+            // Get all condition fields, operators, and values
+            const conditions = Array.from(document.querySelectorAll('#ruleConditionsContainer .d-flex')).map(condition => {
+            return {
+                field: condition.querySelector('[name="condition_field[]"]').value,
+                operator: condition.querySelector('[name="condition_operator[]"]').value,
+                value: condition.querySelector('[name="condition_value[]"]').value,
+                and_condition: condition.querySelector('[name="condition_and_condition[]"]').value
+            };
+            });
+
+            // Send conditions to the server to fetch associated transactions
+            fetch("{{ url_for('get_associated_transactions') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ conditions })
+            })
+            .then(response => response.json())
+            .then(data => {
+            // Handle the response data (e.g., update the UI with associated transactions)
+            console.log('Associated transactions:', data);
+            const tbody = document.querySelector('#associatedTransactions tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            data.forEach(transaction => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                
+                <td>${transaction.account_name}</td>
+                <td>${transaction.particulars}</td>
+                <td>${transaction.code}</td>
+                <td>${transaction.reference}</td>
+                <td>${transaction.payee}</td>
+                <td>${transaction.amount}</td>
+                <td>${transaction.transaction_type}</td>
+                <td>${transaction.destination_account_number}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            })
+            .catch(error => {
+            console.error('Error fetching associated transactions:', error);
+            });
+        }
+        function removeCondition(button) {
+            button.parentElement.remove();
+        }
+
+        function addAction(categoryId = '', subcategoryId = '') {
+            var container = document.getElementById('ruleActionsContainer');
+            var actionHtml = `
+                <div class="d-flex mb-2">
+                    <select class="form-control mr-2" name="action_category_id[]" onchange="updateSubcategories(this)" required>
+                        <option value="">Select Category</option>
+                        ${categories.map(category => `<option value="${category.id}" ${categoryId == category.id ? 'selected' : ''}>${category.name}</option>`).join('')}
+                    </select>
+                    <select class="form-control mr-2" name="action_subcategory_id[]">
+                        <option value="">Select SubCategory</option>
+                        ${subcategories.filter(subcategory => subcategory.category_id == categoryId).map(subcategory => `<option value="${subcategory.id}" ${subcategoryId == subcategory.id ? 'selected' : ''}>${subcategory.name}</option>`).join('')}
+                    </select>
+                    <button type="button" class="btn btn-danger" onclick="removeAction(this)">Remove</button>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', actionHtml);
+        }
+
+        function updateSubcategories(selectElement) {
+            var categoryId = selectElement.value;
+            var subcategorySelect = selectElement.nextElementSibling;
+            subcategorySelect.innerHTML = '<option value="">Select SubCategory</option>';
+            subcategories.filter(subcategory => subcategory.category_id == categoryId).forEach(subcategory => {
+                subcategorySelect.insertAdjacentHTML('beforeend', `<option value="${subcategory.id}">${subcategory.name}</option>`);
+            });
+        }
+
+        function removeAction(button) {
+            button.parentElement.remove();
+        }
+
+        function deleteRule(ruleId) {
+            if (confirm('Are you sure you want to delete this rule?')) {
+                window.location.href = "{{ url_for('delete_rule', rule_id=0) }}".replace('0', ruleId);
+            }
+        }
+    </script>
 {% endblock %}
